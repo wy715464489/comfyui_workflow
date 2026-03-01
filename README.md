@@ -456,6 +456,62 @@ data = json.dumps({'prompt': wf}).encode()  # 需先转换为API格式
 
 ---
 
+## 九、道具/宝石/装备工作流
+
+所有工作流均使用 SDXL Base 1.0，输出 **1024×1024**（方形，适合游戏图标），白底，约 100s/张（Mac M4 MPS）。
+
+### 工作流列表
+
+| 文件 | 类型 | 默认示例 |
+|---|---|---|
+| `workflows/ui/item_icon.json` | 道具图标 | 红色生命药水瓶，华丽玻璃瓶 |
+| `workflows/ui/gem_icon.json` | 宝石图标 | 切割红宝石，折射光效 |
+| `workflows/ui/equipment_weapon.json` | 武器装备 | 蓝色魔法长剑，刻有符文 |
+| `workflows/ui/equipment_armor.json` | 防具装备 | 银色骑士胸甲，金色花纹 |
+
+### 快速使用
+
+```bash
+# 1. 验证全部道具工作流（约 7 分钟）
+python test/test_items.py
+
+# 2. ComfyUI 界面：拖入任意 workflows/ui/*.json，修改 Positive Prompt → Queue Prompt
+```
+
+### 自定义提示词参考
+
+修改 **Positive Prompt**（节点 id=2，`widgets_values[0]`）替换道具描述：
+
+```
+# 其他道具
+2D game item icon, fantasy RPG key, ornate golden key, magical runes, white background, centered, game asset, anime style
+
+# 其他宝石
+2D game gem icon, fantasy RPG sapphire, deep blue faceted diamond cut, light refraction, white background, centered, game asset
+
+# 其他武器
+2D game weapon icon, fantasy RPG staff, wizard staff with crystal orb, glowing purple magic, white background, centered, game asset
+
+# 其他防具
+2D game armor icon, fantasy RPG shield, round knight shield, blue crest, magical barrier glow, white background, centered, game asset
+```
+
+### 批量生成不同变体
+
+通过脚本修改 seed（或提示词）批量生成同类道具系列：
+
+```python
+# 示例：生成 5 种宝石
+gems = ["ruby", "sapphire", "emerald", "amethyst", "topaz"]
+colors = ["red", "blue", "green", "purple", "yellow"]
+for gem, color in zip(gems, colors):
+    # 修改节点 id=2 的 widgets_values[0] 中的宝石描述
+    # 修改节点 id=5 的 widgets_values[0] 为不同 seed
+    pass  # 详见 scripts/utils/workflow_template.py
+```
+
+---
+
 ## 项目结构
 
 ```
@@ -471,7 +527,11 @@ comfyui_workflow/
 │   │   ├── scene_outdoor.json        # 室外场景：1216×832，奇幻森林/草原
 │   │   ├── scene_indoor.json         # 室内场景：1216×832，地牢/城堡内部
 │   │   └── scene_parallax_layers.json # 视差三层：天空+中景+前景，各1216×832
-│   └── ui/                           # UI 图标工作流（待添加）
+│   └── ui/
+│       ├── item_icon.json            # 道具图标：1024×1024，白底，药水/卷轴/钥匙等
+│       ├── gem_icon.json             # 宝石图标：1024×1024，白底，各类宝石/水晶
+│       ├── equipment_weapon.json     # 武器装备：1024×1024，白底，剑/法杖/弓等
+│       └── equipment_armor.json      # 防具装备：1024×1024，白底，头盔/胸甲/盾牌
 ├── scripts/
 │   ├── utils/
 │   │   ├── comfy_api.py          # ComfyUI API 封装

@@ -25,6 +25,7 @@ python test/test_scene.py
 | `test_api.py` | ComfyUI 连通、模型加载、节点注册 | <5s |
 | `test_character.py` | 头部立绘 XL（1024×1024）、全身立绘 XL（832×1216） | ~3-4 分钟 |
 | `test_scene.py` | 室外场景、室内/地牢场景、视差三层（共 5 张图） | ~8-10 分钟 |
+| `test_items.py` | 道具图标、宝石图标、武器装备、防具装备（共 4 张图） | ~7 分钟 |
 
 ## 新增工作流时
 
