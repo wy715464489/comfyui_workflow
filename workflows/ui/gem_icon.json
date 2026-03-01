@@ -86,7 +86,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "2D game item icon, single ruby gemstone, RPG inventory icon, hand-painted illustration, vibrant red crystal, centered, white background, game UI asset, fantasy RPG style, clear silhouette, saturated colors"
+        "2D game icon, one single large red crystal stone, filling the entire frame, edge to edge, close-up macro, centered, white background, no other objects, game UI asset, hand-painted illustration"
       ]
     },
     {
@@ -125,7 +125,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "multiple items, pair, group, collection, realistic photo, photography, 3d render, text, watermark, blurry, lowres, bad quality, ugly, background scene, jewelry, ring, necklace, bracelet"
+        "multiple items, pair, group, collection, realistic photo, photography, 3d render, text, watermark, blurry, lowres, bad quality, ugly, background scene, jewelry, ring, necklace, bracelet, match3, bejeweled, two crystals, three crystals, cluster, scattered gems"
       ]
     },
     {
@@ -211,10 +211,10 @@
         "Node name for S&R": "KSampler"
       },
       "widgets_values": [
-        20,
+        42,
         "fixed",
-        25,
-        7.0,
+        30,
+        7.5,
         "euler_ancestral",
         "normal",
         1.0
