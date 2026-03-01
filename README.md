@@ -364,6 +364,37 @@ print(paths)  # ['output/hero_001/hero_ComfyUI_00001_.png', ...]
 
 ---
 
+## 七、Kwai-Kolors（可灵）模型设置
+
+**注意**：Kwai-Kolors 是基于 SDXL 的高质量模型，对中文/英文提示词理解极佳，画质远超 SD1.5，但显存和下载要求较高。
+
+### 1. 安装插件（已自动完成）
+本项目已集成 `ComfyUI-KwaiKolorsWrapper` 插件。
+
+### 2. 手动下载模型（必需）
+由于终端无法访问 HuggingFace，且该插件需要 **Diffusers 格式**（非单文件），请按以下结构下载：
+
+**A. 主模型 (Diffusers 格式)**
+请在 `ComfyUI/models/diffusers/Kolors` 目录下手动创建文件夹结构，并下载对应文件：
+- `scheduler/scheduler_config.json`
+- `unet/config.json`
+- `unet/diffusion_pytorch_model.fp16.safetensors` (约 10GB)
+- `model_index.json`
+
+> **简单方法**：
+> 如果觉得手动下载 Diffusers 格式太复杂，建议使用 git lfs 下载整个仓库：
+> `git clone https://huggingface.co/Kwai-Kolors/Kolors ComfyUI/models/diffusers/Kolors`
+
+**B. 文本编码器 (ChatGLM3)**
+- **下载地址**: [HuggingFace - ChatGLM3-6B](https://huggingface.co/THUDM/chatglm3-6b/tree/main)
+- **存放路径**: `ComfyUI/models/LLM/checkpoints/chatglm3-6b/`
+  *(注意：需保留文件夹结构，例如 `config.json`, `tokenizer.model` 等)*
+
+### 3. 使用 Kolors 工作流
+下载模型并重启 ComfyUI 后，加载 `workflows/kolors/kolors_basic.json`。
+
+---
+
 ## 项目结构
 
 ```
