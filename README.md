@@ -2,6 +2,8 @@
 
 利用 ComfyUI + IP-Adapter + LoRA + ControlNet，批量生成**风格统一**的 2D 游戏资源（角色立绘、场景背景、UI 图标）。
 
+> ✅ **已验证环境**：Mac M4 + macOS + Miniconda（torch312 环境）+ ComfyUI 0.9.2 + MPS 加速
+
 ---
 
 ## 目录
@@ -9,56 +11,57 @@
 - [本地安装 ComfyUI](#一本地安装-comfyui)
 - [安装必需自定义节点](#二安装必需自定义节点)
 - [下载模型文件](#三下载模型文件)
-- [在 ComfyUI 界面使用工作流](#四在-comfyui-界面使用工作流)
-- [使用 Python 脚本批量生成](#五使用-python-脚本批量生成)
+- [验证单张图生成](#四验证单张图生成)
+- [在 ComfyUI 界面使用工作流](#五在-comfyui-界面使用工作流)
+- [使用 Python 脚本批量生成](#六使用-python-脚本批量生成)
 - [项目结构](#项目结构)
 
 ---
 
 ## 一、本地安装 ComfyUI
 
-### Mac（Apple Silicon M 系列）
+### Mac（Apple Silicon，M 系列）
+
+**推荐使用 Conda 管理环境**（与系统 Python 隔离）：
 
 ```bash
-# 1. 克隆 ComfyUI
+# 1. 安装 Miniconda（如已安装跳过）
+brew install --cask miniconda
+
+# 2. 创建专用环境（Python 3.12 + PyTorch for MPS）
+conda create -n torch312 python=3.12 -y
+conda activate torch312
+pip install torch torchvision torchaudio   # 自动选择 MPS 支持版本
+
+# 3. 克隆 ComfyUI
 git clone https://github.com/comfyanonymous/ComfyUI.git
 cd ComfyUI
-
-# 2. 创建虚拟环境
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. 安装依赖（MPS 后端，无需 CUDA）
-pip install torch torchvision torchaudio
 pip install -r requirements.txt
 
-# 4. 启动（MPS 加速）
-python main.py --use-mps-device
+# 4. 启动（MPS 自动识别，无需额外参数）
+python main.py --port 8188
 ```
 
 浏览器访问 `http://127.0.0.1:8188`
 
+> **注意**：新版 ComfyUI（0.9+）已移除 `--use-mps-device` 参数，直接 `python main.py` 即可自动使用 MPS。
+
 ### Windows / Linux（NVIDIA GPU，GTX 1080 等）
 
 ```bash
-# 1. 克隆 ComfyUI
-git clone https://github.com/comfyanonymous/ComfyUI.git
-cd ComfyUI
+# 1. 创建 Conda 环境
+conda create -n comfyui python=3.12 -y
+conda activate comfyui
 
-# 2. 创建虚拟环境
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux:
-source venv/bin/activate
-
-# 3. 安装 PyTorch（CUDA 11.8 示例，按实际 CUDA 版本选择）
+# 2. 安装 PyTorch（CUDA 11.8 示例，按实际 CUDA 版本选择）
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# 4. 安装依赖
+# 3. 克隆并安装 ComfyUI
+git clone https://github.com/comfyanonymous/ComfyUI.git
+cd ComfyUI
 pip install -r requirements.txt
 
-# 5. 启动（GTX 1080 建议加 --lowvram 节省显存）
+# 4. 启动（GTX 1080 建议加 --lowvram 节省显存）
 python main.py --lowvram
 ```
 
@@ -68,57 +71,136 @@ python main.py --lowvram
 
 ## 二、安装必需自定义节点
 
-### 方法 A：通过 ComfyUI-Manager（推荐）
-
-1. 进入 ComfyUI `custom_nodes` 目录，克隆 Manager：
-   ```bash
-   cd ComfyUI/custom_nodes
-   git clone https://github.com/ltdrdata/ComfyUI-Manager.git
-   ```
-2. 重启 ComfyUI，界面右下角出现 **Manager** 按钮。
-3. 点击 Manager → **Install Missing Custom Nodes**，自动检测并安装工作流所需节点。
-
-### 方法 B：手动克隆
-
 ```bash
 cd ComfyUI/custom_nodes
 
-# IP-Adapter（外观一致性核心）
+# 1. ComfyUI-Manager（节点管理，必装）
+git clone https://github.com/ltdrdata/ComfyUI-Manager.git
+pip install -r ComfyUI-Manager/requirements.txt
+
+# 2. IP-Adapter（外观一致性核心，无额外依赖）
 git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git
 
-# ControlNet 预处理（Pose、Lineart 等）
+# 3. （可选）ControlNet 预处理（Pose、Lineart 等）
 git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git
-
-# 安装各节点的 Python 依赖
-pip install -r ComfyUI_IPAdapter_plus/requirements.txt
 pip install -r comfyui_controlnet_aux/requirements.txt
 ```
 
-重启 ComfyUI 生效。
+重启 ComfyUI 生效。启动日志中出现以下内容说明节点加载成功：
+
+```
+Import times for custom nodes:
+   0.0 seconds: ComfyUI_IPAdapter_plus
+   0.1 seconds: ComfyUI-Manager
+```
+
+> 也可以在 ComfyUI 界面点击右下角 **Manager → Install Missing Custom Nodes** 自动安装工作流缺少的节点。
 
 ---
 
 ## 三、下载模型文件
 
-将模型放到 ComfyUI 对应目录（`ComfyUI/models/`）：
+### 基础模型（checkpoint）
 
-| 模型 | 目录 | 推荐来源 |
+将 `.safetensors` 文件放入 `ComfyUI/models/checkpoints/`：
+
+| 模型 | 用途 | 下载 |
 |---|---|---|
-| **Animagine XL 3.1**（角色/背景） | `models/checkpoints/` | [Hugging Face](https://huggingface.co/cagliostrolab/animagine-xl-3.1) |
-| **Flat2D AnimeMix**（图标/像素） | `models/checkpoints/` | [Civitai](https://civitai.com/models/35960) |
-| **IP-Adapter Plus SDXL** | `models/ipadapter/` | [Hugging Face](https://huggingface.co/h94/IP-Adapter) → `sdxl/` |
-| **CLIP Vision ViT-H** | `models/clip_vision/` | 同上，`models/image_encoder/` 下的 `model.safetensors` |
-| **ControlNet OpenPose XL** | `models/controlnet/` | [Hugging Face](https://huggingface.co/thibaud/controlnet-openpose-sdxl-1.0) |
+| `v1-5-pruned-emaonly-fp16.safetensors` | SD1.5 基础，快速验证 | [Hugging Face](https://huggingface.co/runwayml/stable-diffusion-v1-5) |
+| Animagine XL 3.1 | 动漫风角色/背景（SDXL） | [Hugging Face](https://huggingface.co/cagliostrolab/animagine-xl-3.1) |
+| Flat2D AnimeMix | 2D 图标/道具（SD1.5） | [Civitai](https://civitai.com/models/35960) |
 
-> **IP-Adapter 文件对照**：
-> - `ip-adapter-plus_sdxl_vit-h.safetensors` → `models/ipadapter/`
-> - `clip_vision_g.safetensors`（ViT-bigG）→ `models/clip_vision/`
+### IP-Adapter 模型（一致性核心）
 
-角色专属 LoRA（可选，效果最佳）放入 `models/loras/`。若暂无 LoRA，可将 `characters.json` 中 `lora` 字段留空，工作流会跳过 LoRA 节点。
+使用 `huggingface_hub` 下载（自动处理断点续传）。中国用户可通过 `HF_ENDPOINT=https://hf-mirror.com` 加速：
+
+```python
+import os, shutil
+# 中国用户取消下一行注释
+# os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+from huggingface_hub import hf_hub_download
+
+COMFYUI = "/path/to/ComfyUI"   # 替换为你的 ComfyUI 路径
+
+# IP-Adapter SD1.5 适配器权重（~43MB）
+# 文件名必须为 ip-adapter_sd15.safetensors（匹配 STANDARD preset 的正则）
+path = hf_hub_download(repo_id="h94/IP-Adapter",
+                       filename="models/ip-adapter_sd15.safetensors",
+                       local_dir="/tmp/ipadapter")
+shutil.copy2(path, f"{COMFYUI}/models/ipadapter/ip-adapter_sd15.safetensors")
+
+# CLIP Vision ViT-H（~2.3GB，图像编码器）
+# 文件名必须含 "ipadapter" 和 "sd15"（如 ipadapter_sd15.safetensors）才能被 IPAdapterUnifiedLoader 识别
+path = hf_hub_download(repo_id="h94/IP-Adapter",
+                       filename="models/image_encoder/model.safetensors",
+                       local_dir="/tmp/ipadapter_hf")
+shutil.copy2(path, f"{COMFYUI}/models/clip_vision/ipadapter_sd15.safetensors")
+```
+
+> ⚠️ **注意文件命名规则**（IPAdapter_plus 通过正则自动匹配）：
+> - `models/ipadapter/` 中的文件名需匹配 `ip.adapter.sd15` → 使用 `ip-adapter_sd15.safetensors`
+> - `models/clip_vision/` 中的文件名需匹配 `ipadapter.*sd15` 或 `ViT.H.14.*s32B.b79K` → 使用 `ipadapter_sd15.safetensors`
+
+### LoRA（可选，效果最佳）
+
+角色专属 LoRA 放入 `ComfyUI/models/loras/`。若暂无 LoRA，将 `characters.json` 中 `lora_weight` 设为 `0` 即可跳过。
 
 ---
 
-## 四、在 ComfyUI 界面使用工作流
+## 四、验证单张图生成
+
+ComfyUI 启动后，运行以下脚本验证环境是否正常（仅需 SD1.5 checkpoint，无需 IP-Adapter）：
+
+```bash
+# 在本项目根目录运行
+python scripts/test_single.py
+```
+
+或直接用 Python：
+
+```python
+import json, urllib.request, urllib.parse, time
+
+URL = "http://127.0.0.1:8188"
+
+workflow = {
+  "1": {"class_type": "CheckpointLoaderSimple",
+        "inputs": {"ckpt_name": "v1-5-pruned-emaonly-fp16.safetensors"}},
+  "2": {"class_type": "CLIPTextEncode",
+        "inputs": {"text": "2D game character, female warrior, anime style", "clip": ["1", 1]}},
+  "3": {"class_type": "CLIPTextEncode",
+        "inputs": {"text": "lowres, bad anatomy", "clip": ["1", 1]}},
+  "4": {"class_type": "EmptyLatentImage",
+        "inputs": {"width": 512, "height": 768, "batch_size": 1}},
+  "5": {"class_type": "KSampler",
+        "inputs": {"seed": 42, "steps": 20, "cfg": 7.0,
+                   "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 1.0,
+                   "model": ["1",0], "positive": ["2",0], "negative": ["3",0], "latent_image": ["4",0]}},
+  "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5",0], "vae": ["1",2]}},
+  "7": {"class_type": "SaveImage", "inputs": {"filename_prefix": "test_character", "images": ["6",0]}}
+}
+
+data = json.dumps({"prompt": workflow}).encode()
+req = urllib.request.Request(f"{URL}/prompt", data=data, headers={"Content-Type": "application/json"})
+prompt_id = json.loads(urllib.request.urlopen(req).read())["prompt_id"]
+print(f"提交成功，prompt_id: {prompt_id}，等待生成（约 30-120s）...")
+
+for _ in range(60):
+    time.sleep(3)
+    history = json.loads(urllib.request.urlopen(
+        f"{URL}/history/{urllib.parse.quote(prompt_id)}").read())
+    if prompt_id in history:
+        for out in history[prompt_id]["outputs"].values():
+            for img in out.get("images", []):
+                print(f"✅ 生成成功：ComfyUI/output/{img['filename']}")
+        break
+```
+
+> ✅ **已验证**：Mac M4 + MPS + SD1.5，约 **30s** 生成一张 512×768 图像。
+
+---
+
+## 五、在 ComfyUI 界面使用工作流（含 IP-Adapter）
 
 ### 加载工作流
 
@@ -132,6 +214,7 @@ pip install -r comfyui_controlnet_aux/requirements.txt
 | 节点 title | 需要修改的参数 | 说明 |
 |---|---|---|
 | `CheckpointLoaderSimple` | 模型文件名 | 选择你已下载的 checkpoint |
+| `IP-Adapter Unified Loader` | preset | `STANDARD` 配 `ip-adapter_sd15.safetensors`；`PLUS` 需下载 plus 版本 |
 | `LoRA Loader` | LoRA 文件名、权重（0~1） | 没有 LoRA 可将权重设为 0 |
 | `Positive Prompt` | 正向提示词 | 描述角色外观、动作、风格 |
 | `Negative Prompt` | 负向提示词 | 排除不想要的元素 |
@@ -149,7 +232,7 @@ pip install -r comfyui_controlnet_aux/requirements.txt
 
 ---
 
-## 五、使用 Python 脚本批量生成
+## 六、使用 Python 脚本批量生成
 
 适用于需要批量生成多个角色/多个动作变体的场景。
 
