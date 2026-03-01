@@ -395,6 +395,67 @@ print(paths)  # ['output/hero_001/hero_ComfyUI_00001_.png', ...]
 
 ---
 
+## 八、场景背景工作流
+
+所有场景工作流均使用 SDXL Base 1.0，输出 **1216×832**（横版游戏标准分辨率），约 100s/张（Mac M4 MPS）。
+
+### 工作流列表
+
+| 文件 | 场景类型 | 用途 |
+|---|---|---|
+| `workflows/background/scene_outdoor.json` | 奇幻户外 | 森林、草原、山脉、河流，昼间阳光 |
+| `workflows/background/scene_indoor.json` | 地牢/室内 | 石砖地牢、火把、拱门，暗黑氛围 |
+| `workflows/background/scene_parallax_layers.json` | 视差三层 | 同时生成天空层+中景层+前景层，供横板游戏视差滚动 |
+
+### 快速使用
+
+```bash
+# 方法1：ComfyUI 界面
+# 拖入 workflows/background/scene_outdoor.json → 修改 Positive Prompt → Queue Prompt
+
+# 方法2：Python API
+python3 -c "
+import json, urllib.request
+with open('workflows/background/scene_outdoor.json') as f:
+    wf = json.load(f)
+# 修改提示词（节点 id=2 的 widgets_values[0]）
+for node in wf['nodes']:
+    if node['id'] == 2:
+        node['widgets_values'][0] = '你的场景描述...'
+# 提交
+data = json.dumps({'prompt': wf}).encode()  # 需先转换为API格式
+"
+```
+
+### 视差层使用说明
+
+`scene_parallax_layers.json` 一次生成 3 张独立图层：
+
+| 输出文件 | 内容 | 游戏引擎用途 |
+|---|---|---|
+| `scene_layer_1_sky_*.png` | 天空/云彩层 | 最远层，滚动速度最慢（0.1x） |
+| `scene_layer_2_mid_*.png` | 中景树林/山脉 | 中间层（0.3x） |
+| `scene_layer_3_fore_*.png` | 前景草地/岩石 | 最近层，滚动最快（1.0x） |
+
+在 Unity/Godot 中叠加 3 张图，设置不同的 `scroll_speed` 即可实现视差效果。
+
+### 自定义场景提示词
+
+修改工作流中 **Positive Prompt**（节点 id=2）的 `widgets_values[0]`：
+
+```
+# 城镇场景
+2D game background, fantasy medieval town, cobblestone streets, half-timbered houses, market stalls, warm lighting, anime style
+
+# 雪山场景
+2D game background, snowy mountain landscape, pine forests, frozen lake, aurora borealis, night sky, anime style
+
+# 海边场景
+2D game background, tropical beach, palm trees, crystal clear ocean, sunset, anime style
+```
+
+---
+
 ## 项目结构
 
 ```
@@ -403,8 +464,13 @@ comfyui_workflow/
 │   ├── character/
 │   │   ├── portrait_head.json        # 头部立绘：512×640，正面特写，适合头像/对话框
 │   │   ├── portrait_fullbody.json    # 全身立绘：512×768，含武器，强化手部负向词
-│   │   └── base_character.json       # 基础模板（已被上两个取代，保留供参考）
-│   ├── background/                   # 场景背景工作流（待添加）
+│   │   ├── portrait_head_xl.json     # 头部立绘 XL：1024×1024，SDXL 高画质
+│   │   ├── portrait_fullbody_xl.json # 全身立绘 XL：832×1216，SDXL 含武器
+│   │   └── base_character.json       # 基础模板（保留供参考）
+│   ├── background/
+│   │   ├── scene_outdoor.json        # 室外场景：1216×832，奇幻森林/草原
+│   │   ├── scene_indoor.json         # 室内场景：1216×832，地牢/城堡内部
+│   │   └── scene_parallax_layers.json # 视差三层：天空+中景+前景，各1216×832
 │   └── ui/                           # UI 图标工作流（待添加）
 ├── scripts/
 │   ├── utils/
