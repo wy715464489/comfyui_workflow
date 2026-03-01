@@ -1,16 +1,20 @@
 {
   "_comment": [
-    "base_character.json — 角色立绘基础工作流（已验证可用）",
-    "数据流：CheckpointLoaderSimple → IPAdapterUnifiedLoader → IPAdapter",
-    "        LoraLoader → KSampler → VAEDecode → SaveImage",
+    "base_character.json — 角色立绘基础工作流（SD1.5 + IP-Adapter PLUS，已验证可用）",
+    "数据流：CheckpointLoaderSimple → IPAdapterUnifiedLoader → LoraLoader → IPAdapter → KSampler → VAEDecode → SaveImage",
+    "",
+    "【全身图关键参数（已验证）】",
+    "  分辨率：512×768（SD1.5 全身安全区）",
+    "  seed=42 在此提示词下自然产生全身构图",
+    "  去掉 character design sheet，改用 2D game character sprite + single character + front view",
+    "",
     "IP-Adapter 预设说明：",
-    "  STANDARD (medium strength)  对应模型 ip-adapter_sd15.safetensors（SD1.5）",
-    "  PLUS (high strength)        对应模型 ip-adapter-plus_sd15.safetensors（SD1.5，需额外下载）",
-    "CLIP Vision 文件名须匹配正则 ipadapter.*sd15 或 ViT.H.14.*s32B.b79K",
-    "  推荐命名：ipadapter_sd15.safetensors → 放入 ComfyUI/models/clip_vision/"
+    "  STANDARD (medium strength)  对应模型 ip-adapter_sd15.safetensors",
+    "  PLUS (high strength)        对应模型 ip-adapter-plus_sd15.safetensors",
+    "CLIP Vision 文件名须匹配正则 ipadapter.*sd15，推荐：ipadapter_sd15.safetensors"
   ],
-  "last_node_id": 13,
-  "last_link_id": 16,
+  "last_node_id": 11,
+  "last_link_id": 14,
   "nodes": [
     {
       "id": 1,
@@ -45,7 +49,7 @@
     {
       "id": 3,
       "type": "LoraLoader",
-      "title": "LoRA Loader",
+      "title": "LoRA Loader（无LoRA时保持默认，strength=0可禁用）",
       "pos": [420, 220],
       "size": [320, 130],
       "inputs": [
@@ -56,46 +60,46 @@
         {"name": "MODEL", "type": "MODEL", "links": [6]},
         {"name": "CLIP",  "type": "CLIP",  "links": [7]}
       ],
-      "widgets_values": ["hero_lora_v1.safetensors", 0.8, 0.8]
+      "widgets_values": ["hero_lora_v1.safetensors", 0.0, 0.0]
     },
     {
       "id": 4,
       "type": "CLIPTextEncode",
       "title": "Positive Prompt",
       "pos": [800, 220],
-      "size": [500, 100],
+      "size": [520, 120],
       "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
       "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [8]}],
       "widgets_values": [
-        "1girl, hero, red hair, blue eyes, fantasy armor, white background, full body, whole body, head to toe, from far away, character sheet, masterpiece, best quality, anime style"
+        "2D game character sprite, single character, front view, standing, full body, white background, simple background, 1girl, red hair, blue eyes, red fantasy armor, anime style, masterpiece, best quality"
       ]
     },
     {
       "id": 5,
       "type": "CLIPTextEncode",
       "title": "Negative Prompt",
-      "pos": [800, 350],
-      "size": [500, 100],
+      "pos": [800, 370],
+      "size": [520, 120],
       "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
       "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [9]}],
       "widgets_values": [
-        "lowres, bad anatomy, bad hands, watermark, signature, extra limbs, ugly, deformed, cropped, out of frame, cut off, partial body, missing legs, missing feet"
+        "lowres, bad anatomy, bad hands, watermark, signature, extra limbs, ugly, deformed, cropped, out of frame, cut off, partial body, missing legs, missing feet, multiple characters, character sheet, group, duo, close up, portrait, upper body, bust"
       ]
     },
     {
       "id": 6,
       "type": "EmptyLatentImage",
-      "title": "EmptyLatentImage",
+      "title": "EmptyLatentImage（512×768 = SD1.5全身安全区）",
       "pos": [50, 280],
       "size": [240, 110],
       "inputs": [],
       "outputs": [{"name": "LATENT", "type": "LATENT", "links": [10]}],
-      "widgets_values": [512, 1024, 1]
+      "widgets_values": [512, 768, 1]
     },
     {
       "id": 7,
       "type": "LoadImage",
-      "title": "Load Reference Image",
+      "title": "Load Reference Image（替换为自己的角色参考图）",
       "pos": [50, 440],
       "size": [280, 110],
       "inputs": [],
@@ -103,13 +107,13 @@
         {"name": "IMAGE", "type": "IMAGE", "links": [11]},
         {"name": "MASK",  "type": "MASK",  "links": []}
       ],
-      "widgets_values": ["hero_ref.png", "image"]
+      "widgets_values": ["reference_character.png", "image"]
     },
     {
       "id": 8,
       "type": "IPAdapter",
-      "title": "IP-Adapter",
-      "pos": [800, 480],
+      "title": "IP-Adapter（weight=0.6, start_at=0.2 防止构图污染）",
+      "pos": [800, 500],
       "size": [340, 220],
       "inputs": [
         {"name": "model",    "type": "MODEL",    "link": 6},
@@ -123,7 +127,7 @@
     {
       "id": 9,
       "type": "KSampler",
-      "title": "KSampler",
+      "title": "KSampler（seed=42 已验证产生全身图）",
       "pos": [1200, 220],
       "size": [320, 260],
       "inputs": [
@@ -133,7 +137,7 @@
         {"name": "latent_image","type": "LATENT",      "link": 10}
       ],
       "outputs": [{"name": "LATENT", "type": "LATENT", "links": [13]}],
-      "widgets_values": [42, "fixed", 20, 7.0, "dpmpp_2m", "karras", 1.0]
+      "widgets_values": [42, "fixed", 20, 6.5, "euler", "karras", 1.0]
     },
     {
       "id": 10,
@@ -176,303 +180,11 @@
     [14,10, 0, 11, 0, "IMAGE"]
   ],
   "groups": [
-    {"title": "模型加载 + IP-Adapter", "bounding": [30, 50, 800, 620], "color": "#3f789e"},
-    {"title": "提示词",               "bounding": [780, 200, 550, 270], "color": "#5a7a3a"},
-    {"title": "采样 + 输出",           "bounding": [1180, 200, 920, 130], "color": "#6a3a7a"}
+    {"title": "模型加载 + IP-Adapter", "bounding": [30, 50, 800, 640], "color": "#3f789e"},
+    {"title": "提示词",               "bounding": [780, 200, 560, 320], "color": "#5a7a3a"},
+    {"title": "采样 + 输出",          "bounding": [1180, 200, 920, 130], "color": "#6a3a7a"}
   ],
   "config": {},
   "extra": {"ds": {"scale": 0.8, "offset": [0, 0]}},
-  "version": 0.4
-}
-
-  "last_node_id": 20,
-  "last_link_id": 24,
-  "nodes": [
-    {
-      "id": 1,
-      "type": "CheckpointLoaderSimple",
-      "title": "CheckpointLoaderSimple",
-      "pos": [50, 100],
-      "size": [300, 100],
-      "inputs": [],
-      "outputs": [
-        {"name": "MODEL",      "type": "MODEL",     "links": [1]},
-        {"name": "CLIP",       "type": "CLIP",      "links": [2]},
-        {"name": "VAE",        "type": "VAE",       "links": [3]}
-      ],
-      "widgets_values": [
-        "animagineXL31.safetensors"
-      ]
-    },
-    {
-      "id": 2,
-      "type": "LoraLoader",
-      "title": "LoRA Loader",
-      "pos": [400, 100],
-      "size": [320, 130],
-      "inputs": [
-        {"name": "model", "type": "MODEL", "link": 1},
-        {"name": "clip",  "type": "CLIP",  "link": 2}
-      ],
-      "outputs": [
-        {"name": "MODEL", "type": "MODEL", "links": [4]},
-        {"name": "CLIP",  "type": "CLIP",  "links": [5]}
-      ],
-      "widgets_values": [
-        "lora",
-        "hero_lora_v1.safetensors",
-        0.8,
-        0.8
-      ]
-    },
-    {
-      "id": 3,
-      "type": "CLIPTextEncode",
-      "title": "Positive Prompt",
-      "pos": [400, 280],
-      "size": [480, 100],
-      "inputs": [
-        {"name": "clip", "type": "CLIP", "link": 5}
-      ],
-      "outputs": [
-        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [6]}
-      ],
-      "widgets_values": [
-        "1girl, hero, red hair, blue eyes, fantasy armor, white background, full body, masterpiece, best quality"
-      ]
-    },
-    {
-      "id": 4,
-      "type": "CLIPTextEncode",
-      "title": "Negative Prompt",
-      "pos": [400, 410],
-      "size": [480, 100],
-      "inputs": [
-        {"name": "clip", "type": "CLIP", "link": 5}
-      ],
-      "outputs": [
-        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [7]}
-      ],
-      "widgets_values": [
-        "lowres, bad anatomy, bad hands, watermark, signature, extra limbs, ugly, deformed"
-      ]
-    },
-    {
-      "id": 5,
-      "type": "EmptyLatentImage",
-      "title": "EmptyLatentImage",
-      "pos": [50, 320],
-      "size": [240, 110],
-      "inputs": [],
-      "outputs": [
-        {"name": "LATENT", "type": "LATENT", "links": [8]}
-      ],
-      "widgets_values": [768, 1024, 1]
-    },
-    {
-      "id": 6,
-      "type": "KSampler",
-      "title": "KSampler",
-      "pos": [920, 280],
-      "size": [320, 260],
-      "inputs": [
-        {"name": "model",      "type": "MODEL",       "link": 4},
-        {"name": "positive",   "type": "CONDITIONING","link": 6},
-        {"name": "negative",   "type": "CONDITIONING","link": 7},
-        {"name": "latent_image","type": "LATENT",     "link": 8}
-      ],
-      "outputs": [
-        {"name": "LATENT", "type": "LATENT", "links": [9]}
-      ],
-      "widgets_values": [
-        42,
-        "fixed",
-        20,
-        7.0,
-        "dpmpp_2m",
-        "karras",
-        1.0
-      ]
-    },
-    {
-      "id": 7,
-      "type": "VAEDecode",
-      "title": "VAEDecode",
-      "pos": [1290, 280],
-      "size": [200, 80],
-      "inputs": [
-        {"name": "samples", "type": "LATENT", "link": 9},
-        {"name": "vae",     "type": "VAE",    "link": 3}
-      ],
-      "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [10]}
-      ],
-      "widgets_values": []
-    },
-    {
-      "id": 8,
-      "type": "LoadImage",
-      "title": "Load Reference Image",
-      "pos": [50, 520],
-      "size": [240, 110],
-      "inputs": [],
-      "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [11]},
-        {"name": "MASK",  "type": "MASK",  "links": []}
-      ],
-      "widgets_values": [
-        "hero_ref.png",
-        "image"
-      ]
-    },
-    {
-      "id": 9,
-      "type": "IPAdapterModelLoader",
-      "title": "IP-Adapter Model Loader",
-      "pos": [50, 680],
-      "size": [280, 80],
-      "inputs": [],
-      "outputs": [
-        {"name": "IPADAPTER", "type": "IPADAPTER", "links": [12]}
-      ],
-      "widgets_values": [
-        "ip-adapter-plus_sdxl_vit-h.safetensors"
-      ]
-    },
-    {
-      "id": 10,
-      "type": "CLIPVisionLoader",
-      "title": "CLIP Vision Loader",
-      "pos": [50, 800],
-      "size": [280, 80],
-      "inputs": [],
-      "outputs": [
-        {"name": "CLIP_VISION", "type": "CLIP_VISION", "links": [13]}
-      ],
-      "widgets_values": [
-        "clip_vision_g.safetensors"
-      ]
-    },
-    {
-      "id": 11,
-      "type": "IPAdapter",
-      "title": "IP-Adapter",
-      "pos": [1290, 400],
-      "size": [320, 220],
-      "inputs": [
-        {"name": "model",       "type": "MODEL",       "link": 4},
-        {"name": "ipadapter",   "type": "IPADAPTER",   "link": 12},
-        {"name": "image",       "type": "IMAGE",       "link": 11},
-        {"name": "clip_vision", "type": "CLIP_VISION", "link": 13},
-        {"name": "attn_mask",   "type": "MASK",        "link": null}
-      ],
-      "outputs": [
-        {"name": "MODEL", "type": "MODEL", "links": [14]}
-      ],
-      "widgets_values": [
-        0.6,
-        "linear",
-        0.0,
-        1.0,
-        "concat"
-      ]
-    },
-    {
-      "id": 12,
-      "type": "KSampler",
-      "title": "KSampler (Refine)",
-      "pos": [1660, 280],
-      "size": [320, 260],
-      "inputs": [
-        {"name": "model",       "type": "MODEL",       "link": 14},
-        {"name": "positive",    "type": "CONDITIONING","link": 6},
-        {"name": "negative",    "type": "CONDITIONING","link": 7},
-        {"name": "latent_image","type": "LATENT",      "link": 9}
-      ],
-      "outputs": [
-        {"name": "LATENT", "type": "LATENT", "links": [15]}
-      ],
-      "widgets_values": [
-        42,
-        "fixed",
-        10,
-        7.0,
-        "dpmpp_2m",
-        "karras",
-        0.5
-      ]
-    },
-    {
-      "id": 13,
-      "type": "VAEDecode",
-      "title": "VAEDecode (Final)",
-      "pos": [2030, 280],
-      "size": [200, 80],
-      "inputs": [
-        {"name": "samples", "type": "LATENT", "link": 15},
-        {"name": "vae",     "type": "VAE",    "link": 3}
-      ],
-      "outputs": [
-        {"name": "IMAGE", "type": "IMAGE", "links": [16]}
-      ],
-      "widgets_values": []
-    },
-    {
-      "id": 14,
-      "type": "SaveImage",
-      "title": "SaveImage",
-      "pos": [2280, 280],
-      "size": [240, 80],
-      "inputs": [
-        {"name": "images", "type": "IMAGE", "link": 16}
-      ],
-      "outputs": [],
-      "widgets_values": [
-        "character/hero"
-      ]
-    }
-  ],
-  "links": [
-    [1,  1, 0,  2, 0, "MODEL"],
-    [2,  1, 1,  2, 1, "CLIP"],
-    [3,  1, 2,  7, 1, "VAE"],
-    [4,  2, 0,  6, 0, "MODEL"],
-    [5,  2, 1,  3, 0, "CLIP"],
-    [6,  3, 0,  6, 1, "CONDITIONING"],
-    [7,  4, 0,  6, 2, "CONDITIONING"],
-    [8,  5, 0,  6, 3, "LATENT"],
-    [9,  6, 0,  7, 0, "LATENT"],
-    [10, 7, 0, 11, 0, "IMAGE"],
-    [11, 8, 0, 11, 2, "IMAGE"],
-    [12, 9, 0, 11, 1, "IPADAPTER"],
-    [13,10, 0, 11, 3, "CLIP_VISION"],
-    [14,11, 0, 12, 0, "MODEL"],
-    [15,12, 0, 13, 0, "LATENT"],
-    [16,13, 0, 14, 0, "IMAGE"]
-  ],
-  "groups": [
-    {
-      "title": "模型加载",
-      "bounding": [30, 70, 720, 200],
-      "color": "#3f789e"
-    },
-    {
-      "title": "提示词",
-      "bounding": [380, 260, 520, 280],
-      "color": "#5a7a3a"
-    },
-    {
-      "title": "IP-Adapter 一致性",
-      "bounding": [30, 500, 600, 420],
-      "color": "#7a5a3a"
-    },
-    {
-      "title": "采样 + 输出",
-      "bounding": [900, 250, 1680, 320],
-      "color": "#6a3a7a"
-    }
-  ],
-  "config": {},
-  "extra": {},
   "version": 0.4
 }
