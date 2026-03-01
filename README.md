@@ -104,11 +104,15 @@ Import times for custom nodes:
 
 将 `.safetensors` 文件放入 `ComfyUI/models/checkpoints/`：
 
-| 模型 | 用途 | 下载 |
-|---|---|---|
-| `v1-5-pruned-emaonly-fp16.safetensors` | SD1.5 基础，快速验证 | [Hugging Face](https://huggingface.co/runwayml/stable-diffusion-v1-5) |
-| Animagine XL 3.1 | 动漫风角色/背景（SDXL） | [Hugging Face](https://huggingface.co/cagliostrolab/animagine-xl-3.1) |
-| Flat2D AnimeMix | 2D 图标/道具（SD1.5） | [Civitai](https://civitai.com/models/35960) |
+| 模型 | 用途 | 手部质量 | 下载 |
+|---|---|---|---|
+| `v1-5-pruned-emaonly-fp16.safetensors` | SD1.5 原始基模（快速验证用） | ⭐ 极差 | [Hugging Face](https://huggingface.co/runwayml/stable-diffusion-v1-5) |
+| **`meinamix_v11.safetensors`** | **动漫/游戏角色，手部优秀 ← 推荐** | ⭐⭐⭐⭐ | [Civitai](https://civitai.com/models/7240/meinamix) |
+| `anything-v5-prtRE.safetensors` | 通用动漫，稳定 | ⭐⭐⭐ | [Civitai](https://civitai.com/models/9409/anything-v5-prt-re) |
+| `toonyou_beta6.safetensors` | 卡通/游戏精灵专用风格 | ⭐⭐⭐ | [Civitai](https://civitai.com/models/33208/toonyou) |
+| Animagine XL 3.1 | 动漫风角色/背景（SDXL） | ⭐⭐⭐ | [Hugging Face](https://huggingface.co/cagliostrolab/animagine-xl-3.1) |
+
+> ⚡ **强烈推荐**：将 `v1-5-pruned-emaonly-fp16` 更换为 **MeinaMix v11**（同为 SD1.5 格式，直接替换工作流中的 checkpoint 名称），可大幅改善手部质量和整体画质。从 Civitai 下载后放入 `ComfyUI/models/checkpoints/`，工作流中将 `CheckpointLoaderSimple` 的模型名改为 `meinamix_v11.safetensors`。
 
 ### IP-Adapter 模型（一致性核心）
 
@@ -216,6 +220,43 @@ for _ in range(60):
 
 ## 五、在 ComfyUI 界面使用工作流（含 IP-Adapter）
 
+### 两种角色立绘工作流对比
+
+| 工作流文件 | 用途 | 分辨率 | IP-Adapter 配置 |
+|---|---|---|---|
+| `workflows/character/portrait_head.json` | **头部立绘**（正面特写，肩部以上，适合头像/对话框） | 512×640 | weight=0.7, start_at=0.0 |
+| `workflows/character/portrait_fullbody.json` | **全身立绘**（头到脚，含武器，适合角色展示/Sprite 基底） | 512×768 | weight=0.6, start_at=0.2 |
+
+### 武器提示词示例
+
+在 `portrait_fullbody.json` 的 **Positive Prompt** 中加入武器描述：
+
+```
+# 单手剑
+(holding sword:1.3), (sword in right hand:1.2), fantasy sword
+
+# 法杖
+(holding staff:1.3), (magic staff in hand:1.2), glowing staff
+
+# 弓箭
+(holding bow:1.3), (bow in hand:1.2), elven bow
+
+# 匕首
+(holding dagger:1.3), (dagger in hand:1.2)
+```
+
+### 手部质量提升方法
+
+1. **换模型**（最有效）：使用 MeinaMix v11 替换 v1-5-pruned，手部质量提升最明显
+2. **强化负向词**：确保负向词包含 `(bad hands:1.4), (extra fingers:1.4), (deformed hands:1.4), (fused fingers:1.4), (missing fingers:1.4)`
+3. **安装 ComfyUI-Impact-Pack**（手部自动修复）：
+   ```bash
+   cd ComfyUI/custom_nodes
+   git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git
+   pip install -r ComfyUI-Impact-Pack/requirements.txt
+   ```
+   重启 ComfyUI 后，可在工作流末端添加 `FaceDetailer` 节点，自动检测并重绘手部区域
+
 ### 加载工作流
 
 1. 打开 `http://127.0.0.1:8188`
@@ -227,14 +268,14 @@ for _ in range(60):
 
 | 节点 title | 需要修改的参数 | 说明 |
 |---|---|---|
-| `CheckpointLoaderSimple` | 模型文件名 | 选择你已下载的 checkpoint |
+| `CheckpointLoaderSimple` | 模型文件名 | **推荐改为 meinamix_v11.safetensors** |
 | `IP-Adapter Unified Loader` | preset | `STANDARD` 配 `ip-adapter_sd15.safetensors`；`PLUS` 需下载 plus 版本 |
 | `LoRA Loader` | LoRA 文件名、权重（0~1） | 没有 LoRA 可将权重设为 0 |
-| `Positive Prompt` | 正向提示词 | 描述角色外观、动作、风格 |
-| `Negative Prompt` | 负向提示词 | 排除不想要的元素 |
-| `KSampler` | seed（种子）、steps | 固定 seed 可复现结果 |
+| `Positive Prompt` | 正向提示词 | 描述角色外观、动作、武器、风格 |
+| `Negative Prompt` | 负向提示词 | 保留 `(bad hands:1.4)` 等手部负向词 |
+| `KSampler` | seed（种子）、steps | 固定 seed 可复现结果（全身图推荐 seed=42） |
 | `Load Reference Image` | 参考图文件名 | 将参考图放入 `ComfyUI/input/` 目录 |
-| `IP-Adapter` | weight（建议 0.5~0.7） | 越高越贴近参考图外观 |
+| `IP-Adapter` | weight（建议 0.6~0.7） | 越高越贴近参考图外观 |
 
 ### 放置参考图
 
@@ -329,9 +370,11 @@ print(paths)  # ['output/hero_001/hero_ComfyUI_00001_.png', ...]
 comfyui_workflow/
 ├── workflows/
 │   ├── character/
-│   │   └── base_character.json   # 角色立绘：IP-Adapter + LoRA + 二次精修
-│   ├── background/               # 场景背景工作流（待添加）
-│   └── ui/                       # UI 图标工作流（待添加）
+│   │   ├── portrait_head.json        # 头部立绘：512×640，正面特写，适合头像/对话框
+│   │   ├── portrait_fullbody.json    # 全身立绘：512×768，含武器，强化手部负向词
+│   │   └── base_character.json       # 基础模板（已被上两个取代，保留供参考）
+│   ├── background/                   # 场景背景工作流（待添加）
+│   └── ui/                           # UI 图标工作流（待添加）
 ├── scripts/
 │   ├── utils/
 │   │   ├── comfy_api.py          # ComfyUI API 封装

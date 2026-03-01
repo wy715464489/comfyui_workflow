@@ -1,0 +1,190 @@
+{
+  "_comment": [
+    "portrait_head.json — 角色头部立绘工作流（SD1.5 + IP-Adapter PLUS）",
+    "用途：生成肩部以上正面特写，用于游戏头像、角色卡牌、对话框立绘等",
+    "",
+    "【参数说明】",
+    "  分辨率：512×640（头部特写最优比例，略高于正方形）",
+    "  IP-Adapter weight=0.7, start_at=0.0：参考图特征从第0步注入，强化面部外观一致性",
+    "  CFG=7.0：头部特写提示词跟随性要更强",
+    "  seed=42：已验证产生清晰面部的种子",
+    "",
+    "【与全身工作流的区别】",
+    "  头部立绘：特写构图，详细眼睛/头发，无武器/腿部",
+    "  全身立绘：拉远镜头，站姿全图，含武器"
+  ],
+  "last_node_id": 11,
+  "last_link_id": 14,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "title": "CheckpointLoaderSimple（推荐 MeinaMix v11）",
+      "pos": [50, 80],
+      "size": [340, 100],
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [1]},
+        {"name": "CLIP",  "type": "CLIP",  "links": [2]},
+        {"name": "VAE",   "type": "VAE",   "links": [3]}
+      ],
+      "widgets_values": ["v1-5-pruned-emaonly-fp16.safetensors"]
+    },
+    {
+      "id": 2,
+      "type": "IPAdapterUnifiedLoader",
+      "title": "IP-Adapter Unified Loader（PLUS 高强度，强化面部一致性）",
+      "pos": [440, 80],
+      "size": [380, 100],
+      "inputs": [
+        {"name": "model",     "type": "MODEL",     "link": 1},
+        {"name": "ipadapter", "type": "IPADAPTER", "link": null}
+      ],
+      "outputs": [
+        {"name": "model",     "type": "MODEL",     "links": [4]},
+        {"name": "ipadapter", "type": "IPADAPTER", "links": [5]}
+      ],
+      "widgets_values": ["PLUS (high strength)"]
+    },
+    {
+      "id": 3,
+      "type": "LoraLoader",
+      "title": "LoRA Loader（无LoRA时 strength=0.0）",
+      "pos": [440, 220],
+      "size": [320, 130],
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 4},
+        {"name": "clip",  "type": "CLIP",  "link": 2}
+      ],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [6]},
+        {"name": "CLIP",  "type": "CLIP",  "links": [7]}
+      ],
+      "widgets_values": ["hero_lora_v1.safetensors", 0.0, 0.0]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "title": "Positive Prompt（头部特写）",
+      "pos": [820, 220],
+      "size": [540, 140],
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [8]}],
+      "widgets_values": [
+        "portrait, close-up, face focus, upper body, 1girl, red hair, blue eyes, red fantasy armor, detailed eyes, detailed face, beautiful face, anime style, game character portrait, masterpiece, best quality, intricate details"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "title": "Negative Prompt（头部立绘）",
+      "pos": [820, 390],
+      "size": [540, 140],
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [9]}],
+      "widgets_values": [
+        "lowres, bad anatomy, watermark, signature, ugly, deformed, (bad hands:1.4), (extra fingers:1.4), (deformed hands:1.4), (fused fingers:1.4), (missing fingers:1.4), full body, feet, legs, cropped face, out of frame, blurry face, disfigured face, bad eyes"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "title": "EmptyLatentImage（512×640 头部特写比例）",
+      "pos": [50, 280],
+      "size": [260, 110],
+      "inputs": [],
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [10]}],
+      "widgets_values": [512, 640, 1]
+    },
+    {
+      "id": 7,
+      "type": "LoadImage",
+      "title": "Load Reference Image（角色参考图，建议用正面面部图）",
+      "pos": [50, 440],
+      "size": [300, 110],
+      "inputs": [],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [11]},
+        {"name": "MASK",  "type": "MASK",  "links": []}
+      ],
+      "widgets_values": ["reference_character.png", "image"]
+    },
+    {
+      "id": 8,
+      "type": "IPAdapter",
+      "title": "IP-Adapter（weight=0.7 start_at=0.0，头部一致性强注入）",
+      "pos": [820, 540],
+      "size": [360, 220],
+      "inputs": [
+        {"name": "model",    "type": "MODEL",    "link": 6},
+        {"name": "ipadapter","type": "IPADAPTER","link": 5},
+        {"name": "image",    "type": "IMAGE",    "link": 11},
+        {"name": "attn_mask","type": "MASK",     "link": null}
+      ],
+      "outputs": [{"name": "MODEL", "type": "MODEL", "links": [12]}],
+      "widgets_values": [0.7, 0.0, 1.0, "standard"]
+    },
+    {
+      "id": 9,
+      "type": "KSampler",
+      "title": "KSampler（头部立绘 CFG=7.0，更高提示词跟随性）",
+      "pos": [1240, 220],
+      "size": [320, 260],
+      "inputs": [
+        {"name": "model",       "type": "MODEL",       "link": 12},
+        {"name": "positive",    "type": "CONDITIONING","link": 8},
+        {"name": "negative",    "type": "CONDITIONING","link": 9},
+        {"name": "latent_image","type": "LATENT",      "link": 10}
+      ],
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [13]}],
+      "widgets_values": [42, "fixed", 20, 7.0, "dpmpp_2m", "karras", 1.0]
+    },
+    {
+      "id": 10,
+      "type": "VAEDecode",
+      "title": "VAEDecode",
+      "pos": [1600, 220],
+      "size": [200, 80],
+      "inputs": [
+        {"name": "samples","type": "LATENT","link": 13},
+        {"name": "vae",    "type": "VAE",  "link": 3}
+      ],
+      "outputs": [{"name": "IMAGE","type": "IMAGE","links": [14]}],
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "SaveImage",
+      "title": "SaveImage",
+      "pos": [1840, 220],
+      "size": [260, 80],
+      "inputs": [{"name": "images","type": "IMAGE","link": 14}],
+      "outputs": [],
+      "widgets_values": ["character/head"]
+    }
+  ],
+  "links": [
+    [1,  1, 0,  2, 0, "MODEL"],
+    [2,  1, 1,  3, 1, "CLIP"],
+    [3,  1, 2, 10, 1, "VAE"],
+    [4,  2, 0,  3, 0, "MODEL"],
+    [5,  2, 1,  8, 1, "IPADAPTER"],
+    [6,  3, 0,  8, 0, "MODEL"],
+    [7,  3, 1,  4, 0, "CLIP"],
+    [8,  4, 0,  9, 1, "CONDITIONING"],
+    [9,  5, 0,  9, 2, "CONDITIONING"],
+    [10, 6, 0,  9, 3, "LATENT"],
+    [11, 7, 0,  8, 2, "IMAGE"],
+    [12, 8, 0,  9, 0, "MODEL"],
+    [13, 9, 0, 10, 0, "LATENT"],
+    [14,10, 0, 11, 0, "IMAGE"]
+  ],
+  "groups": [
+    {"title": "模型加载 + IP-Adapter", "bounding": [30, 50, 820, 660], "color": "#3f789e"},
+    {"title": "提示词（头部特写）",    "bounding": [800, 200, 580, 360], "color": "#5a7a3a"},
+    {"title": "采样 + 输出",          "bounding": [1220, 200, 940, 130], "color": "#6a3a7a"}
+  ],
+  "config": {},
+  "extra": {"ds": {"scale": 0.8, "offset": [0, 0]}},
+  "version": 0.4
+}

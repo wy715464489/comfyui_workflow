@@ -1,0 +1,201 @@
+{
+  "_comment": [
+    "portrait_fullbody.json — 角色全身立绘工作流（SD1.5 + IP-Adapter PLUS）",
+    "用途：生成头到脚正面站立全身图，含武器，用于游戏角色展示/Sprite 基底",
+    "",
+    "【参数说明】",
+    "  分辨率：512×768（SD1.5 全身安全区，超过768高度会角色重复）",
+    "  IP-Adapter weight=0.6, start_at=0.2：前20%步骤由文本建立全身构图，再注入外观特征",
+    "  weight_type='prompt is more important'：防止IP-Adapter将特写参考图的构图污染全身图",
+    "  CFG=6.5：全身构图时适当降低CFG，避免肢体僵硬",
+    "",
+    "【已验证全身 seed 列表（使用本文件提示词）】",
+    "  seed=42  → 全身（头到大腿根）✅",
+    "  seed=88  → 待验证",
+    "  seed=137 → 待验证",
+    "  如需稳定全身：切换 seed_control_mode 为 random 多跑几张选最好的",
+    "",
+    "【武器提示词规则】",
+    "  在 Positive Prompt 中加入：(holding sword:1.3), (sword in right hand:1.2)",
+    "  不同武器替换：dagger/bow/staff/axe/spear/shield",
+    "",
+    "【手部质量最佳实践】",
+    "  1. 换用 MeinaMix v11 或 Anything V5（比 v1-5-pruned 手部质量高数倍）",
+    "  2. 负向词中保留 (bad hands:1.4)(extra fingers:1.4) 等",
+    "  3. 安装 ComfyUI-Impact-Pack 后可添加手部自动重绘节点"
+  ],
+  "last_node_id": 11,
+  "last_link_id": 14,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "title": "CheckpointLoaderSimple（推荐换为 MeinaMix v11）",
+      "pos": [50, 80],
+      "size": [340, 100],
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [1]},
+        {"name": "CLIP",  "type": "CLIP",  "links": [2]},
+        {"name": "VAE",   "type": "VAE",   "links": [3]}
+      ],
+      "widgets_values": ["v1-5-pruned-emaonly-fp16.safetensors"]
+    },
+    {
+      "id": 2,
+      "type": "IPAdapterUnifiedLoader",
+      "title": "IP-Adapter Unified Loader（PLUS 高强度）",
+      "pos": [440, 80],
+      "size": [380, 100],
+      "inputs": [
+        {"name": "model",     "type": "MODEL",     "link": 1},
+        {"name": "ipadapter", "type": "IPADAPTER", "link": null}
+      ],
+      "outputs": [
+        {"name": "model",     "type": "MODEL",     "links": [4]},
+        {"name": "ipadapter", "type": "IPADAPTER", "links": [5]}
+      ],
+      "widgets_values": ["PLUS (high strength)"]
+    },
+    {
+      "id": 3,
+      "type": "LoraLoader",
+      "title": "LoRA Loader（无LoRA时 strength=0.0）",
+      "pos": [440, 220],
+      "size": [320, 130],
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 4},
+        {"name": "clip",  "type": "CLIP",  "link": 2}
+      ],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [6]},
+        {"name": "CLIP",  "type": "CLIP",  "links": [7]}
+      ],
+      "widgets_values": ["hero_lora_v1.safetensors", 0.0, 0.0]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "title": "Positive Prompt（全身 + 武器）",
+      "pos": [820, 220],
+      "size": [560, 160],
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [8]}],
+      "widgets_values": [
+        "2D game character sprite, single character, front view, standing, full body, white background, simple background, 1girl, red hair, blue eyes, red fantasy armor, (holding sword:1.3), (sword in right hand:1.2), fantasy sword, anime style, masterpiece, best quality"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "title": "Negative Prompt（全身 + 强化手部）",
+      "pos": [820, 410],
+      "size": [560, 160],
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [9]}],
+      "widgets_values": [
+        "lowres, bad anatomy, watermark, signature, ugly, deformed, (bad hands:1.4), (extra fingers:1.4), (deformed hands:1.4), (fused fingers:1.4), (missing fingers:1.4), (mutated hands:1.4), cropped, out of frame, cut off, partial body, missing legs, missing feet, multiple characters, character sheet, group, duo, close up, portrait, upper body, bust"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "title": "EmptyLatentImage（512×768 全身安全区，超768会角色重复）",
+      "pos": [50, 280],
+      "size": [280, 110],
+      "inputs": [],
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [10]}],
+      "widgets_values": [512, 768, 1]
+    },
+    {
+      "id": 7,
+      "type": "LoadImage",
+      "title": "Load Reference Image（建议换为全身参考图）",
+      "pos": [50, 440],
+      "size": [300, 110],
+      "inputs": [],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [11]},
+        {"name": "MASK",  "type": "MASK",  "links": []}
+      ],
+      "widgets_values": ["reference_character.png", "image"]
+    },
+    {
+      "id": 8,
+      "type": "IPAdapter",
+      "title": "IP-Adapter（weight=0.6 start_at=0.2 防构图污染）",
+      "pos": [820, 580],
+      "size": [360, 220],
+      "inputs": [
+        {"name": "model",    "type": "MODEL",    "link": 6},
+        {"name": "ipadapter","type": "IPADAPTER","link": 5},
+        {"name": "image",    "type": "IMAGE",    "link": 11},
+        {"name": "attn_mask","type": "MASK",     "link": null}
+      ],
+      "outputs": [{"name": "MODEL", "type": "MODEL", "links": [12]}],
+      "widgets_values": [0.6, 0.2, 1.0, "prompt is more important"]
+    },
+    {
+      "id": 9,
+      "type": "KSampler",
+      "title": "KSampler（seed=42 已验证全身，可改 randomize 多跑选优）",
+      "pos": [1240, 220],
+      "size": [320, 260],
+      "inputs": [
+        {"name": "model",       "type": "MODEL",       "link": 12},
+        {"name": "positive",    "type": "CONDITIONING","link": 8},
+        {"name": "negative",    "type": "CONDITIONING","link": 9},
+        {"name": "latent_image","type": "LATENT",      "link": 10}
+      ],
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [13]}],
+      "widgets_values": [42, "fixed", 20, 6.5, "euler", "karras", 1.0]
+    },
+    {
+      "id": 10,
+      "type": "VAEDecode",
+      "title": "VAEDecode",
+      "pos": [1600, 220],
+      "size": [200, 80],
+      "inputs": [
+        {"name": "samples","type": "LATENT","link": 13},
+        {"name": "vae",    "type": "VAE",  "link": 3}
+      ],
+      "outputs": [{"name": "IMAGE","type": "IMAGE","links": [14]}],
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "SaveImage",
+      "title": "SaveImage",
+      "pos": [1840, 220],
+      "size": [260, 80],
+      "inputs": [{"name": "images","type": "IMAGE","link": 14}],
+      "outputs": [],
+      "widgets_values": ["character/fullbody"]
+    }
+  ],
+  "links": [
+    [1,  1, 0,  2, 0, "MODEL"],
+    [2,  1, 1,  3, 1, "CLIP"],
+    [3,  1, 2, 10, 1, "VAE"],
+    [4,  2, 0,  3, 0, "MODEL"],
+    [5,  2, 1,  8, 1, "IPADAPTER"],
+    [6,  3, 0,  8, 0, "MODEL"],
+    [7,  3, 1,  4, 0, "CLIP"],
+    [8,  4, 0,  9, 1, "CONDITIONING"],
+    [9,  5, 0,  9, 2, "CONDITIONING"],
+    [10, 6, 0,  9, 3, "LATENT"],
+    [11, 7, 0,  8, 2, "IMAGE"],
+    [12, 8, 0,  9, 0, "MODEL"],
+    [13, 9, 0, 10, 0, "LATENT"],
+    [14,10, 0, 11, 0, "IMAGE"]
+  ],
+  "groups": [
+    {"title": "模型加载 + IP-Adapter", "bounding": [30, 50, 820, 680], "color": "#3f789e"},
+    {"title": "提示词（全身 + 武器）", "bounding": [800, 200, 600, 400], "color": "#5a7a3a"},
+    {"title": "采样 + 输出",          "bounding": [1220, 200, 940, 130], "color": "#6a3a7a"}
+  ],
+  "config": {},
+  "extra": {"ds": {"scale": 0.8, "offset": [0, 0]}},
+  "version": 0.4
+}
