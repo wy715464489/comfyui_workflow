@@ -86,7 +86,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "product photo of a single longsword, isolated on white background, white studio background, fantasy RPG style, magical blue glowing blade, ornate golden hilt and guard, centered composition, front view, vertical orientation, no shadow, clean white background, highly detailed, commercial product shot"
+        "2D game item icon, single longsword, RPG inventory icon, hand-painted illustration, fantasy sword, centered, white background, game UI asset, fantasy RPG style, clear silhouette, saturated colors, vertical orientation"
       ]
     },
     {
@@ -125,7 +125,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "multiple, several, many, group, collection, pile, scattered, pair, duo, trio, background scene, environment, ground, floor, table, shelf, shadow, reflection, people, characters, hands, text, watermark, lowres, bad quality, blurry, ugly, gradient background, dark background, detailed background, anime style, cartoon"
+        "multiple items, pair, group, collection, realistic photo, photography, 3d render, text, watermark, blurry, lowres, bad quality, ugly, background scene"
       ]
     },
     {
@@ -214,7 +214,7 @@
         30,
         "fixed",
         25,
-        6.5,
+        7.0,
         "euler_ancestral",
         "normal",
         1.0

@@ -86,7 +86,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "product photo of a single red ruby, isolated on white background, white studio background, fantasy RPG style, polished oval cut gemstone, glowing red color, centered composition, front view, no shadow, clean white background, highly detailed, commercial product shot"
+        "2D game item icon, single ruby gemstone, RPG inventory icon, hand-painted illustration, vibrant red crystal, centered, white background, game UI asset, fantasy RPG style, clear silhouette, saturated colors"
       ]
     },
     {
@@ -125,7 +125,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "multiple, several, many, group, collection, pile, scattered, pair, duo, trio, background scene, environment, ground, floor, table, shelf, shadow, reflection, people, characters, hands, text, watermark, lowres, bad quality, blurry, ugly, gradient background, dark background, detailed background, anime style, cartoon"
+        "multiple items, pair, group, collection, realistic photo, photography, 3d render, text, watermark, blurry, lowres, bad quality, ugly, background scene, jewelry, ring, necklace, bracelet"
       ]
     },
     {
@@ -214,7 +214,7 @@
         20,
         "fixed",
         25,
-        6.5,
+        7.0,
         "euler_ancestral",
         "normal",
         1.0
