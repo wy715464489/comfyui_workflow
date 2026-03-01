@@ -67,7 +67,7 @@
       "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
       "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [8]}],
       "widgets_values": [
-        "1girl, hero, red hair, blue eyes, fantasy armor, white background, full body, masterpiece, best quality, anime style"
+        "1girl, hero, red hair, blue eyes, fantasy armor, white background, full body, whole body, head to toe, from far away, character sheet, masterpiece, best quality, anime style"
       ]
     },
     {
@@ -79,7 +79,7 @@
       "inputs": [{"name": "clip", "type": "CLIP", "link": 7}],
       "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [9]}],
       "widgets_values": [
-        "lowres, bad anatomy, bad hands, watermark, signature, extra limbs, ugly, deformed"
+        "lowres, bad anatomy, bad hands, watermark, signature, extra limbs, ugly, deformed, cropped, out of frame, cut off, partial body, missing legs, missing feet"
       ]
     },
     {
@@ -90,7 +90,7 @@
       "size": [240, 110],
       "inputs": [],
       "outputs": [{"name": "LATENT", "type": "LATENT", "links": [10]}],
-      "widgets_values": [512, 768, 1]
+      "widgets_values": [512, 1024, 1]
     },
     {
       "id": 7,
@@ -118,7 +118,7 @@
         {"name": "attn_mask","type": "MASK",     "link": null}
       ],
       "outputs": [{"name": "MODEL", "type": "MODEL", "links": [12]}],
-      "widgets_values": [0.6, 0.0, 1.0, "standard"]
+      "widgets_values": [0.6, 0.2, 1.0, "prompt is more important"]
     },
     {
       "id": 9,
