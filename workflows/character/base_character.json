@@ -40,7 +40,7 @@
         {"name": "model",     "type": "MODEL",     "links": [4]},
         {"name": "ipadapter", "type": "IPADAPTER", "links": [5]}
       ],
-      "widgets_values": ["STANDARD (medium strength)"]
+      "widgets_values": ["PLUS (high strength)"]
     },
     {
       "id": 3,

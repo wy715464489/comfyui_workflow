@@ -122,15 +122,20 @@ from huggingface_hub import hf_hub_download
 
 COMFYUI = "/path/to/ComfyUI"   # 替换为你的 ComfyUI 路径
 
-# IP-Adapter SD1.5 适配器权重（~43MB）
-# 文件名必须为 ip-adapter_sd15.safetensors（匹配 STANDARD preset 的正则）
+# ① IP-Adapter SD1.5 标准版（~43MB）→ 对应 STANDARD (medium strength) preset
 path = hf_hub_download(repo_id="h94/IP-Adapter",
                        filename="models/ip-adapter_sd15.safetensors",
                        local_dir="/tmp/ipadapter")
 shutil.copy2(path, f"{COMFYUI}/models/ipadapter/ip-adapter_sd15.safetensors")
 
-# CLIP Vision ViT-H（~2.3GB，图像编码器）
-# 文件名必须含 "ipadapter" 和 "sd15"（如 ipadapter_sd15.safetensors）才能被 IPAdapterUnifiedLoader 识别
+# ② IP-Adapter SD1.5 PLUS 版（~94MB）→ 对应 PLUS (high strength) preset（推荐）
+path = hf_hub_download(repo_id="h94/IP-Adapter",
+                       filename="models/ip-adapter-plus_sd15.safetensors",
+                       local_dir="/tmp/ipadapter")
+shutil.copy2(path, f"{COMFYUI}/models/ipadapter/ip-adapter-plus_sd15.safetensors")
+
+# ③ CLIP Vision ViT-H（~2.3GB，图像编码器，STANDARD 和 PLUS 共用）
+# 文件名必须匹配 ipadapter.*sd15 才能被 IPAdapterUnifiedLoader 自动识别
 path = hf_hub_download(repo_id="h94/IP-Adapter",
                        filename="models/image_encoder/model.safetensors",
                        local_dir="/tmp/ipadapter_hf")
@@ -139,7 +144,16 @@ shutil.copy2(path, f"{COMFYUI}/models/clip_vision/ipadapter_sd15.safetensors")
 
 > ⚠️ **注意文件命名规则**（IPAdapter_plus 通过正则自动匹配）：
 > - `models/ipadapter/` 中的文件名需匹配 `ip.adapter.sd15` → 使用 `ip-adapter_sd15.safetensors`
-> - `models/clip_vision/` 中的文件名需匹配 `ipadapter.*sd15` 或 `ViT.H.14.*s32B.b79K` → 使用 `ipadapter_sd15.safetensors`
+> - `models/ipadapter/` PLUS 版需匹配 `plus.sd15` → 使用 `ip-adapter-plus_sd15.safetensors`
+> - `models/clip_vision/` 中的文件名需匹配 `ipadapter.*sd15` → 使用 `ipadapter_sd15.safetensors`
+
+**已验证的模型文件清单**：
+
+| 文件 | 路径 | 对应 preset |
+|---|---|---|
+| `ip-adapter_sd15.safetensors` | `models/ipadapter/` | STANDARD (medium strength) |
+| `ip-adapter-plus_sd15.safetensors` | `models/ipadapter/` | **PLUS (high strength)** ← 推荐 |
+| `ipadapter_sd15.safetensors` | `models/clip_vision/` | STANDARD + PLUS 共用 |
 
 ### LoRA（可选，效果最佳）
 
