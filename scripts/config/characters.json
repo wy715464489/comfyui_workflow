@@ -1,0 +1,34 @@
+[
+  {
+    "id": "hero_001",
+    "name": "主角",
+    "workflow": "workflows/character/base_character.json",
+    "ckpt": "animagineXL31.safetensors",
+    "lora": "hero_lora_v1.safetensors",
+    "lora_weight": 0.8,
+    "reference_image": "references/characters/hero_ref.png",
+    "base_prompt": "1girl, hero, red hair, blue eyes, fantasy armor, white background, full body",
+    "negative_prompt": "lowres, bad anatomy, watermark, signature, extra limbs",
+    "seed": 42,
+    "steps": 20,
+    "cfg": 7.0,
+    "width": 768,
+    "height": 1024
+  },
+  {
+    "id": "mage_001",
+    "name": "法师",
+    "workflow": "workflows/character/base_character.json",
+    "ckpt": "animagineXL31.safetensors",
+    "lora": "mage_lora_v1.safetensors",
+    "lora_weight": 0.75,
+    "reference_image": "references/characters/mage_ref.png",
+    "base_prompt": "1boy, mage, white hair, purple robe, staff, white background, full body",
+    "negative_prompt": "lowres, bad anatomy, watermark, signature, extra limbs",
+    "seed": 123,
+    "steps": 20,
+    "cfg": 7.0,
+    "width": 768,
+    "height": 1024
+  }
+]

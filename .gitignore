@@ -1,0 +1,9 @@
+# 生成结果不提交
+output/
+# macOS
+.DS_Store
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
