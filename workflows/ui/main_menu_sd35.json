@@ -1,0 +1,128 @@
+{
+  "last_node_id": 9,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [50, 50],
+      "order": 0,
+      "mode": 0,
+      "outputs": [{"name": "MODEL", "type": "MODEL", "links": [1], "shape": 3}],
+      "properties": {"Node name for S&R": "UNETLoader"},
+      "widgets_values": ["sd3.5_medium.safetensors", "default"]
+    },
+    {
+      "id": 2,
+      "type": "TripleCLIPLoader",
+      "pos": [50, 150],
+      "order": 1,
+      "mode": 0,
+      "outputs": [{"name": "CLIP", "type": "CLIP", "links": [2, 3], "shape": 3}],
+      "properties": {"Node name for S&R": "TripleCLIPLoader"},
+      "widgets_values": [
+        "text_encoders/clip_g.safetensors",
+        "text_encoders/clip_l.safetensors",
+        "text_encoders/t5xxl_fp16.safetensors"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "title": "Positive Prompt",
+      "pos": [420, 50],
+      "order": 2,
+      "mode": 0,
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 2}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [4], "shape": 3}],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": ["ancient chinese game UI button, jade stone texture with gold dragon border"]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "title": "Negative Prompt",
+      "pos": [420, 280],
+      "order": 3,
+      "mode": 0,
+      "inputs": [{"name": "clip", "type": "CLIP", "link": 3}],
+      "outputs": [{"name": "CONDITIONING", "type": "CONDITIONING", "links": [5], "shape": 3}],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": ["blurry, low quality, ugly, multiple elements, text, watermark, modern, western"]
+    },
+    {
+      "id": 5,
+      "type": "EmptySD3LatentImage",
+      "pos": [420, 430],
+      "order": 4,
+      "mode": 0,
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [6], "shape": 3}],
+      "properties": {"Node name for S&R": "EmptySD3LatentImage"},
+      "widgets_values": [512, 512, 1]
+    },
+    {
+      "id": 6,
+      "type": "KSampler",
+      "pos": [980, 200],
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 1},
+        {"name": "positive", "type": "CONDITIONING", "link": 4},
+        {"name": "negative", "type": "CONDITIONING", "link": 5},
+        {"name": "latent_image", "type": "LATENT", "link": 6}
+      ],
+      "outputs": [{"name": "LATENT", "type": "LATENT", "links": [7], "shape": 3}],
+      "properties": {"Node name for S&R": "KSampler"},
+      "widgets_values": [42, "fixed", 28, 4.5, "euler", "simple", 1.0]
+    },
+    {
+      "id": 7,
+      "type": "VAELoader",
+      "pos": [50, 350],
+      "order": 6,
+      "mode": 0,
+      "outputs": [{"name": "VAE", "type": "VAE", "links": [9], "shape": 3}],
+      "properties": {"Node name for S&R": "VAELoader"},
+      "widgets_values": ["sd3_vae.safetensors"]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1340, 200],
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 7},
+        {"name": "vae", "type": "VAE", "link": 9}
+      ],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [8], "shape": 3}],
+      "properties": {"Node name for S&R": "VAEDecode"}
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [1580, 200],
+      "order": 8,
+      "mode": 0,
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 8}],
+      "properties": {"Node name for S&R": "SaveImage"},
+      "widgets_values": ["main_menu_sd35"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 6, 0, "MODEL"],
+    [2, 2, 0, 3, 0, "CLIP"],
+    [3, 2, 0, 4, 0, "CLIP"],
+    [4, 3, 0, 6, 1, "CONDITIONING"],
+    [5, 4, 0, 6, 2, "CONDITIONING"],
+    [6, 5, 0, 6, 3, "LATENT"],
+    [7, 6, 0, 8, 0, "LATENT"],
+    [8, 8, 0, 9, 0, "IMAGE"],
+    [9, 7, 0, 8, 1, "VAE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
