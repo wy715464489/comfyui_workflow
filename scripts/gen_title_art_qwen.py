@@ -77,7 +77,7 @@ def queue_prompt(prompt):
     return json.loads(urllib.request.urlopen(req).read())
 
 
-def wait_result(prompt_id, timeout=600):
+def wait_result(prompt_id, timeout=1200):
     print(f"⏳ 等待生成完成（最长 {timeout}s）...")
     for i in range(timeout):
         time.sleep(1)
