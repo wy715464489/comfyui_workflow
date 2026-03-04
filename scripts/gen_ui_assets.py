@@ -1,220 +1,177 @@
 #!/usr/bin/env python3
 """
-万灵绘 UI 图像生成与处理脚本
+万灵绘 UI 图像后处理脚本（无 TTF 版本）
 功能：
-  1. 处理 Qwen-Image 生成的标题图（去黑背景 + 叠加正确"万灵绘"文字）
-  2. 生成古风按钮图（5个按钮 × 4种状态 = 20张图）
+  1. 处理标题图 title_art.png（千问Image生成的去背景图，直接使用）
+  2. 从千问Image生成的按钮基础图生成 4 种状态（normal/hover/pressed/disabled）
+
+前提：gen_qwen_text_assets.py 已完成生成，输出 *_art.png 到 Generated/ 目录
 
 用法:
-  python3 gen_ui_assets.py              # 全部生成
+  python3 gen_ui_assets.py              # 全部处理
   python3 gen_ui_assets.py --title      # 仅处理标题
-  python3 gen_ui_assets.py --buttons    # 仅生成按钮
+  python3 gen_ui_assets.py --buttons    # 仅生成按钮四态
 """
-import argparse, os, math
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import argparse, os
+from PIL import Image, ImageFilter
 
 # ── 路径配置 ─────────────────────────────────────────────────────────────────
 PROJECT = "/Users/zero/data/project/lore_of_myriad_beings"
 OUT_DIR = f"{PROJECT}/Assets/Art/UI/Generated"
-FONT_PATH = f"{PROJECT}/Assets/Fonts/SourceHanSansCN-Regular.otf"
 
-# ── 颜色 ─────────────────────────────────────────────────────────────────────
-GOLD        = (242, 200,  65, 255)   # 金色
-GOLD_BRIGHT = (255, 235, 120, 255)   # 高亮金
-GOLD_DARK   = (160, 120,  30, 255)   # 暗金（pressed）
-GRAY        = (140, 130, 100, 180)   # 禁用灰
-INK         = (  8,   4,   2, 230)   # 描边墨色
-WHITE       = (255, 255, 255, 255)
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# 1. 标题艺术字处理
-# ════════════════════════════════════════════════════════════════════════════
-
-def remove_dark_bg(img: Image.Image, threshold: int = 60, feather: int = 30) -> Image.Image:
-    """将黑色/深色背景去除，变为透明（基于感知亮度）"""
-    img = img.convert("RGBA")
-    r, g, b, a = img.split()
-    data = list(zip(r.getdata(), g.getdata(), b.getdata(), a.getdata()))
-
-    new_data = []
-    for rv, gv, bv, av in data:
-        # 感知亮度
-        lum = int(0.299 * rv + 0.587 * gv + 0.114 * bv)
-        if lum < threshold:
-            # 纯黑区域：全透明
-            new_data.append((rv, gv, bv, 0))
-        elif lum < threshold + feather:
-            # 过渡区：渐变透明
-            alpha = int(255 * (lum - threshold) / feather)
-            new_data.append((rv, gv, bv, alpha))
-        else:
-            new_data.append((rv, gv, bv, av))
-
-    result = Image.new("RGBA", img.size)
-    result.putdata(new_data)
-    return result
-
-
-def draw_outlined_text(draw: ImageDraw.Draw, xy, text: str, font: ImageFont.FreeTypeFont,
-                       fill, outline, outline_width: int = 8):
-    """绘制带描边的文字"""
-    x, y = xy
-    for dx in range(-outline_width, outline_width + 1):
-        for dy in range(-outline_width, outline_width + 1):
-            if dx * dx + dy * dy <= outline_width * outline_width:
-                draw.text((x + dx, y + dy), text, font=font, fill=outline)
-    draw.text(xy, text, font=font, fill=fill)
-
-
-def process_title():
-    """处理标题图：去黑背景 + 叠加正确的万灵绘文字"""
-    src = f"{OUT_DIR}/title_qwen.png"
-    dst = f"{OUT_DIR}/title_art.png"
-
-    print("📖 处理标题艺术字...")
-
-    # 1. 加载 Qwen 生成的艺术纹理并去背景
-    if os.path.exists(src):
-        base = Image.open(src).convert("RGB").resize((800, 800), Image.LANCZOS)
-        base = remove_dark_bg(base, threshold=55, feather=40)
-        print(f"   去黑背景完成 ({base.size})")
-    else:
-        # 无源图：创建空白画布
-        base = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
-        print("   无源图，使用空白画布")
-
-    # 2. 在去背景的纹理上叠加"万灵绘"文字
-    # 创建文字图层
-    text_layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(text_layer)
-
-    font_main = ImageFont.truetype(FONT_PATH, 220)
-
-    # 居中计算
-    W, H = base.size
-    bbox = draw.textbbox((0, 0), "万灵绘", font=font_main)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    tx = (W - tw) // 2
-    ty = (H - th) // 2
-
-    # 金色渐变描边文字
-    draw_outlined_text(draw, (tx, ty), "万灵绘", font_main,
-                       fill=GOLD, outline=INK, outline_width=10)
-
-    # 添加金色光晕（高斯模糊的亮色层）
-    glow_layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow_layer)
-    draw_outlined_text(gd, (tx, ty), "万灵绘", font_main,
-                       fill=GOLD_BRIGHT, outline=(0, 0, 0, 0), outline_width=0)
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=12))
-
-    # 合成：基础纹理 + 光晕 + 文字
-    result = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    result = Image.alpha_composite(result, base)
-    result = Image.alpha_composite(result, glow_layer)
-    result = Image.alpha_composite(result, text_layer)
-
-    result.save(dst, "PNG")
-    print(f"   ✅ 已保存: {dst} ({result.size})")
-    return result
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# 2. 古风按钮图生成
-# ════════════════════════════════════════════════════════════════════════════
+# 按钮最终输出尺寸（Unity MakeSpriteBtn 对应 480×96）
+BTN_W, BTN_H = 480, 96
 
 BUTTONS = [
-    ("btn_start",    "开始游戏"),
-    ("btn_load",     "加载游戏"),
-    ("btn_settings", "设    置"),
-    ("btn_about",    "关    于"),
-    ("btn_quit",     "退    出"),
+    "btn_start",
+    "btn_load",
+    "btn_settings",
+    "btn_about",
+    "btn_quit",
 ]
 
-BTN_W, BTN_H = 480, 96  # 按钮尺寸（3:1横向）
+
+# ════════════════════════════════════════════════════════════════════════════
+# 通用工具
+# ════════════════════════════════════════════════════════════════════════════
+
+def adjust_brightness(img: Image.Image, factor: float) -> Image.Image:
+    """调整 RGBA 图像 RGB 通道亮度，保留 Alpha"""
+    r, g, b, a = img.split()
+    r = r.point(lambda x: min(255, int(x * factor)))
+    g = g.point(lambda x: min(255, int(x * factor)))
+    b = b.point(lambda x: min(255, int(x * factor)))
+    return Image.merge("RGBA", (r, g, b, a))
 
 
-def draw_button_base(draw: ImageDraw.Draw, w: int, h: int, text: str,
-                     font: ImageFont.FreeTypeFont,
-                     text_color, border_color, border_alpha: int = 180):
-    """绘制古风按钮底图（透明背景 + 细描边 + 文字）"""
-    # 细装饰横线（上下）
-    line_y_top = h // 4
-    line_y_bot = h * 3 // 4
-    line_color = border_color[:3] + (border_alpha,)
-    draw.line([(20, line_y_top), (w - 20, line_y_top)], fill=line_color, width=1)
-    draw.line([(20, line_y_bot), (w - 20, line_y_bot)], fill=line_color, width=1)
-
-    # 左右菱形装饰点
-    dia = 5
-    for px in [16, w - 16]:
-        draw.polygon([
-            (px, h // 2 - dia), (px + dia, h // 2),
-            (px, h // 2 + dia), (px - dia, h // 2)
-        ], fill=line_color)
-
-    # 居中文字
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    tx = (w - tw) // 2
-    ty = (h - th) // 2 - 2
-    draw_outlined_text(draw, (tx, ty), text, font,
-                       fill=text_color, outline=INK, outline_width=5)
+def adjust_alpha(img: Image.Image, factor: float) -> Image.Image:
+    """整体缩放 Alpha 通道（0.0–1.0）"""
+    r, g, b, a = img.split()
+    a = a.point(lambda x: int(x * factor))
+    return Image.merge("RGBA", (r, g, b, a))
 
 
-def make_button_state(text: str, text_color, border_color,
-                      bg_color=(0, 0, 0, 0), blur: float = 0.0,
-                      brightness: float = 1.0) -> Image.Image:
-    """生成单个按钮状态图"""
-    img = Image.new("RGBA", (BTN_W, BTN_H), bg_color)
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(FONT_PATH, 44)
-    draw_button_base(draw, BTN_W, BTN_H, text, font, text_color, border_color)
+def to_grayscale_rgba(img: Image.Image) -> Image.Image:
+    """将 RGBA 图像的 RGB 通道转为灰度（保留 Alpha）"""
+    r, g, b, a = img.split()
+    gray = r.point(lambda x: 0)  # 占位
+    # 感知灰度
+    data = [
+        (int(0.299 * rv + 0.587 * gv + 0.114 * bv),) * 3
+        for rv, gv, bv in zip(r.getdata(), g.getdata(), b.getdata())
+    ]
+    g_r = r.copy(); g_r.putdata([d[0] for d in data])
+    g_g = g.copy(); g_g.putdata([d[0] for d in data])
+    g_b = b.copy(); g_b.putdata([d[0] for d in data])
+    return Image.merge("RGBA", (g_r, g_g, g_b, a))
 
-    if blur > 0:
-        img = img.filter(ImageFilter.GaussianBlur(radius=blur))
-    if brightness != 1.0:
-        r, g, b, a = img.split()
-        r = r.point(lambda x: min(255, int(x * brightness)))
-        g = g.point(lambda x: min(255, int(x * brightness)))
-        b = b.point(lambda x: min(255, int(x * brightness)))
-        img = Image.merge("RGBA", (r, g, b, a))
-    return img
+
+def add_glow(img: Image.Image, radius: float = 4, strength: float = 0.5) -> Image.Image:
+    """添加外发光效果（模糊叠加）"""
+    bright = adjust_brightness(img, 1.3)
+    glow   = bright.filter(ImageFilter.GaussianBlur(radius=radius))
+    glow   = adjust_alpha(glow, strength)
+    result = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    result = Image.alpha_composite(result, glow)
+    result = Image.alpha_composite(result, img)
+    return result
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 1. 标题艺术字（直接使用千问生成的去背景图）
+# ════════════════════════════════════════════════════════════════════════════
+
+def process_title():
+    """验证并整理标题图（千问Image已输出透明背景，无需TTF叠加）"""
+    src = f"{OUT_DIR}/title_art.png"
+    if not os.path.exists(src):
+        # 兼容旧命名：尝试 title_qwen.png
+        alt = f"{OUT_DIR}/title_qwen.png"
+        if os.path.exists(alt):
+            print(f"   ⚠️  未找到 title_art.png，请先运行 gen_qwen_text_assets.py 生成")
+            print(f"   临时使用旧文件 title_qwen.png（含黑色背景，不推荐）")
+        else:
+            print("   ❌ 未找到标题图，请先运行 gen_qwen_text_assets.py")
+        return
+
+    img = Image.open(src).convert("RGBA")
+    print(f"   ✅ 标题图: {src}  {img.size}  模式=RGBA")
+    # 验证透明度
+    corners = [img.getpixel((0, 0)), img.getpixel((img.width - 1, img.height - 1))]
+    alphas  = [c[3] for c in corners]
+    print(f"   四角透明度: {alphas}  {'✅ 背景透明' if all(a < 30 for a in alphas) else '⚠️ 背景可能不透明'}")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 2. 按钮四态生成（基于千问生成的 btn_*_art.png，无 TTF）
+# ════════════════════════════════════════════════════════════════════════════
+
+def make_states(base: Image.Image) -> dict:
+    """从基础图（normal）生成4种状态"""
+    base = base.convert("RGBA")
+
+    # normal：原始去背景图
+    normal = base.copy()
+
+    # hover：提亮 + 外发光
+    hover = add_glow(adjust_brightness(base, 1.2), radius=4, strength=0.6)
+
+    # pressed：压暗 + 轻微缩小感（pad 2px 内缩）
+    pressed_base = adjust_brightness(base, 0.7)
+    pressed = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    inner = pressed_base.crop((2, 2, base.width - 2, base.height - 2))
+    inner = inner.resize((base.width - 4, base.height - 4), Image.LANCZOS)
+    pressed.paste(inner, (3, 3))  # 右下偏移1px营造下沉感
+
+    # disabled：去饱和 + alpha 降为 55%
+    disabled = adjust_alpha(to_grayscale_rgba(base), 0.55)
+
+    return {"normal": normal, "hover": hover, "pressed": pressed, "disabled": disabled}
 
 
 def generate_buttons():
-    """为每个按钮生成 normal / hover / pressed / disabled 四种状态"""
-    print("\n🎨 生成古风按钮图...")
+    """为每个按钮生成 normal/hover/pressed/disabled 四种状态图"""
+    print("\n🎨 从千问Image艺术字生成按钮四态...")
+    missing = []
 
-    for name, text in BUTTONS:
-        # normal：金色文字，透明背景
-        n = make_button_state(text, text_color=GOLD, border_color=GOLD)
-        n.save(f"{OUT_DIR}/{name}_normal.png", "PNG")
+    for name in BUTTONS:
+        art_path = f"{OUT_DIR}/{name}_art.png"
+        if not os.path.exists(art_path):
+            missing.append(name)
+            print(f"   ⚠️  缺少源图: {art_path}")
+            continue
 
-        # hover：更亮金色 + 微微发光
-        h = make_button_state(text, text_color=GOLD_BRIGHT, border_color=GOLD_BRIGHT,
-                              brightness=1.15)
-        # 添加整体辉光
-        glow = h.filter(ImageFilter.GaussianBlur(radius=3))
-        h_final = Image.alpha_composite(glow, h)
-        h_final.save(f"{OUT_DIR}/{name}_hover.png", "PNG")
+        # 加载源图并缩放到按钮尺寸
+        src = Image.open(art_path).convert("RGBA")
+        # 保持比例居中裁剪/缩放至 BTN_W×BTN_H
+        src_ratio = src.width / src.height
+        tgt_ratio = BTN_W / BTN_H
+        if src_ratio > tgt_ratio:
+            # 图像更宽：按高缩放
+            new_h = BTN_H
+            new_w = int(src.width * BTN_H / src.height)
+        else:
+            new_w = BTN_W
+            new_h = int(src.height * BTN_W / src.width)
+        src = src.resize((new_w, new_h), Image.LANCZOS)
+        canvas = Image.new("RGBA", (BTN_W, BTN_H), (0, 0, 0, 0))
+        paste_x = (BTN_W - new_w) // 2
+        paste_y = (BTN_H - new_h) // 2
+        canvas.paste(src, (paste_x, paste_y))
+        base = canvas
 
-        # pressed：暗金 + 轻微下沉感（向右下偏移1px重绘）
-        p = make_button_state(text, text_color=GOLD_DARK, border_color=GOLD_DARK)
-        # 轻微整体变暗
-        p = p.point(lambda x: int(x * 0.80))
-        p.save(f"{OUT_DIR}/{name}_pressed.png", "PNG")
-
-        # disabled：灰色，低透明度
-        d = make_button_state(text, text_color=GRAY, border_color=GRAY)
-        d.save(f"{OUT_DIR}/{name}_disabled.png", "PNG")
-
+        states = make_states(base)
+        for state, img in states.items():
+            out = f"{OUT_DIR}/{name}_{state}.png"
+            img.save(out, "PNG")
         print(f"   ✅ {name}: normal/hover/pressed/disabled")
 
-    print(f"   输出目录: {OUT_DIR}")
+    if missing:
+        print(f"\n   ⚠️  以下按钮缺少源图（需先运行 gen_qwen_text_assets.py --buttons）:")
+        for m in missing:
+            print(f"      - {m}_art.png")
+    else:
+        print(f"   输出目录: {OUT_DIR}")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -224,15 +181,18 @@ def generate_buttons():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--title",   action="store_true", help="仅处理标题")
-    parser.add_argument("--buttons", action="store_true", help="仅生成按钮")
+    parser.add_argument("--buttons", action="store_true", help="仅生成按钮四态")
     args = parser.parse_args()
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    if args.title or (not args.title and not args.buttons):
+    do_all = not args.title and not args.buttons
+
+    if args.title or do_all:
+        print("📖 检查标题艺术字...")
         process_title()
 
-    if args.buttons or (not args.title and not args.buttons):
+    if args.buttons or do_all:
         generate_buttons()
 
     print("\n🎉 全部完成！")
